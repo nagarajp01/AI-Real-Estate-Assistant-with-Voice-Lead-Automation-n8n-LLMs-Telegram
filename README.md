@@ -78,7 +78,7 @@ Screenshots
 ![Google Sheets](workflow%20screenshots/google%20sheet%20property_Details.jpeg)
 
 ### Email Notification
-![Email](workflow%20screenshots/mail.jpeg)
+![Email](workflow%20screenshots/mail%20.jpeg)
 
 
 ---
