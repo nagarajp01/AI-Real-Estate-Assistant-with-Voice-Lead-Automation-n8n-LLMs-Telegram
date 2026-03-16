@@ -70,6 +70,8 @@ Screenshots
 
 ### Telegram Bot Conversation
 ![Bot Chat](workflow%20screenshots/bot%20conversation.jpeg)
+### Telegram Bot Conversation text
+![Bot Chat](workflow%20screenshots/bot%20conversation2.jpeg)
 
 ### Client Details Stored
 ![Client Details](workflow%20screenshots/client_Details.jpeg)
