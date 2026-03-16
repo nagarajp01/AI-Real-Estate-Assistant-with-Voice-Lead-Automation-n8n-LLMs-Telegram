@@ -1,0 +1,705 @@
+{
+  "name": "Real Estate Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1936,
+        48
+      ],
+      "id": "189bf391-015f-4198-81c2-27161787e0fe",
+      "name": "Telegram Trigger",
+      "webhookId": "79c66e74-f25b-4350-b9f2-1826afff88d2",
+      "credentials": {
+        "telegramApi": {
+          "id": "your api",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.voice.mime_type }}",
+                    "rightValue": "audio/ogg",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cd700187-d2e1-4b92-9486-f9a45be8c212"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "72121e79-95ed-4055-84e3-781483937ea9",
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1728,
+        48
+      ],
+      "id": "b7dde2c6-4d39-452d-a53a-e65758831659",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1488,
+        -160
+      ],
+      "id": "d05d9934-5ab3-4845-b160-cace3baf59e8",
+      "name": "Get a file",
+      "webhookId": "5d0b33f1-ac24-4098-ad0d-7bbe72060c84",
+      "credentials": {
+        "telegramApi": {
+          "id": "your api",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer <use your groq api key>"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "model",
+              "value": "whisper-large-v3"
+            },
+            {
+              "name": "temperature",
+              "value": "0"
+            },
+            {
+              "name": "response_format",
+              "value": "verbose_json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1136,
+        -160
+      ],
+      "id": "6fbbbfb2-164b-4238-a8b7-48b8c43b542b",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nif (item.binary && item.binary.data) {\n  item.binary.data.fileName = \"voice.ogg\";\n  item.binary.data.mimeType = \"audio/ogg\";\n  item.binary.data.fileExtension = \"ogg\";\n}\n\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1312,
+        -176
+      ],
+      "id": "b18c6d3d-6925-4175-9709-08ab16d71237",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-safeguard-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -1008,
+        256
+      ],
+      "id": "5fa4665f-eb23-4d24-a9c4-b83dadad2262",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "your id",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        256
+      ],
+      "id": "3897f082-c781-4c0f-93f8-c3b41158b4d0",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to retrieve property listings from the Google Sheets database.\n\nThe sheet contains real estate properties in Hyderabad.\n\nEach row includes:\n- property_name\n- location\n- type\n- price\n- bedrooms\n\nUse this tool whenever the user asks about:\n- available properties\n- property listings\n- properties in a specific location\n- property details\n\nAlways retrieve properties from this tool instead of generating property data yourself.",
+        "documentId": {
+          "__rl": true,
+          "value": "your sheet id",
+          "mode": "list",
+          "cachedResultName": "Real Estate",
+          "cachedResultUrl": "place your documaent list of properites"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "property_Details",
+          "cachedResultUrl": "use your sheet"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -752,
+        256
+      ],
+      "id": "c0e44742-bcd9-4f01-9a92-21f0754343a1",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "use your id",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let data = $json.output || $json;\n\n// If output is a string\nif (typeof data === \"string\") {\n\n  const start = data.indexOf(\"{\");\n  const end = data.lastIndexOf(\"}\");\n\n  if (start !== -1 && end !== -1) {\n    const jsonString = data.substring(start, end + 1);\n    try {\n      data = JSON.parse(jsonString);\n    } catch (err) {\n      data = {\n        properties: [],\n        message: data\n      };\n    }\n  } else {\n    data = {\n      properties: [],\n      message: data\n    };\n  }\n}\n\n// If AI agent wrapped response inside another output object\nif (data.output) {\n  data = data.output;\n}\n\n// Ensure structure always exists\nif (!data.properties) {\n  data.properties = [];\n}\n\nif (!data.message) {\n  data.message = \"\";\n}\n\nreturn [\n  {\n    json: data\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        32
+      ],
+      "id": "3090482d-9901-4c64-9f24-f54172c3ab64",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get text from Telegram OR voice transcription\n// const userMessage =\n//   $json.text || $('Telegram Trigger').first().json.message?.text || \"\";\n// Get text from Telegram OR voice transcription\nlet userMessage = \"\";\n\ntry {\n  userMessage = $(\"HTTP Request\").first().json.text;\n} catch (e) {\n  userMessage = $(\"Telegram Trigger\").first().json.message?.text || \"\";\n}\n\n// Remove spaces\nconst cleanedMessage = userMessage.trim();\n\n// Phone validation\nconst validPhone = /^[6-9]\\d{9}$/.test(cleanedMessage);\nconst shortMessage = cleanedMessage.length <= 10;\n\n// Keep previous AI data\nconst data = $json;\n\ndata.isPhoneValid = validPhone && shortMessage;\ndata.phone = cleanedMessage;\n\nreturn [\n  {\n    json: data\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        32
+      ],
+      "id": "8bd81581-ccd3-4d22-be65-6a4c3b426300",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "59a6c46f-e0aa-41d9-92d7-12a7b2f934dd",
+              "leftValue": "={{ $json.isPhoneValid }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        32
+      ],
+      "id": "d95d41dd-4761-467c-84ca-32420b78a975",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "yourmail@gmail.com",
+        "subject": "📢 New Real Estate– Contact Client",
+        "emailType": "text",
+        "message": "=Hello,\n\nA new client has shown interest in a property.\n\nClient Phone: {{ $json.phone }}\n\nClient Name: {{ $json.name }}\n\nLocation: {{ $json.preferred_location }}\n\nType:{{ $json.property_type }}\n\n\nPrice: ₹ {{ $json.price }}\n\nBedrooms: {{ $json.bedrooms }}\nPlease contact the client as soon as possible.\nRegards\nProperty Automation System",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        -64
+      ],
+      "id": "6f052b5b-2f83-445c-b158-a4b92a725006",
+      "name": "Send a message",
+      "webhookId": "f06886cf-d891-4ec4-b891-630107334068",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "your id",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{$json.message}}\n{{$json.properties.map((p,i)=> \n`${i+1}. ${p.property_name}\n📍 ${p.location}\n🏠 ${p.type}\n💰 ₹${p.price}\n🛏 ${p.bedrooms} BHK`\n).join('\\n\\n')}}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        128
+      ],
+      "id": "e803a098-7f4b-497e-be9f-d543f2a4f6d6",
+      "name": "Send a text message",
+      "webhookId": "a9b6df42-fb40-4dcb-be1a-00ebb6817760",
+      "credentials": {
+        "telegramApi": {
+          "id": "your api",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "your doc",
+          "mode": "list",
+          "cachedResultName": "Real Estate",
+          "cachedResultUrl": "your doc url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "your doc",
+          "mode": "list",
+          "cachedResultName": "clientdetails",
+          "cachedResultUrl": "your doc url"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "client_id": "==ROW()-1",
+            "phone": "={{ $json.phone }}",
+            "name": "={{ $('Telegram Trigger').item.json.message.from.first_name }} {{ $('Telegram Trigger').item.json.message.from.last_name }}",
+            "preferred_location": "={{ $json.properties[0].location }}",
+            "price": "={{ $json.properties[0].price }}",
+            "property_type": "={{ $json.properties[0].type }}",
+            "bedrooms": "={{ $json.properties[0].bedrooms }}",
+            "date_added": "={{ $now.format(\"yyyy-MM-dd HH:mm:ss\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "client_id",
+              "displayName": "client_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "preferred_location",
+              "displayName": "preferred_location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "bedrooms",
+              "displayName": "bedrooms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "property_type",
+              "displayName": "property_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date_added",
+              "displayName": "date_added",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        -64
+      ],
+      "id": "6d67d02a-0f9d-4e8e-a8cd-ed846dc4aecf",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "your sheet",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "Thank you! Your consultation has been successfully scheduled.  One of our property consultants will contact you shortly to discuss the property details.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        576,
+        -64
+      ],
+      "id": "92b7eb4c-9f40-4dcc-ad36-ce48e1518658",
+      "name": "Send a text message1",
+      "webhookId": "fe53c1dd-23dc-49f7-80a9-e2dc2633b221",
+      "credentials": {
+        "telegramApi": {
+          "id": "your api",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text || $json.message.text }}",
+        "options": {
+          "systemMessage": "You are a professional real estate assistant helping users find properties in Hyderabad.\n\nAll property data exists ONLY in the Google Sheets tool connected to you.\nNever invent property data.\n\nPROPERTY DATA SOURCE\n\nThe Google Sheets tool returns rows with fields:\n\nproperty_name\nlocation\ntype\nprice\nbedrooms\n\nOnly use these fields.\n\n\nRESPONSE FORMAT\n\nEvery response MUST be valid JSON:\n\n{\n  \"properties\":[\n    {\n      \"property_name\":\"\",\n      \"location\":\"\",\n      \"type\":\"\",\n      \"price\":0,\n      \"bedrooms\":0\n    }\n  ],\n  \"message\":\"\"\n}\n\nNever return text outside JSON.\n\n\nCONVERSATION STATE MANAGEMENT\n\nYou must track conversation state in memory.\n\nPossible states:\n\nbrowsing_properties\nproperty_selected\nawaiting_phone\ncompleted\n\n\nGREETING\n\nIf the user says hello, hi, hey:\n\nReturn\n\n{\n \"properties\":[],\n \"message\":\"Hello! I'm your real estate assistant for Hyderabad. How can I help you find a property today?\"\n}\n\nSet state = browsing_properties\n\n\nUSER ASKS FOR PROPERTIES\n\nWhen the user asks for properties:\n\n1. Call the Google Sheets tool\n2. Retrieve rows\n3. Filter based on request if needed\n\n\nExample:\n\n{\n \"properties\":[...],\n \"message\":\"Here are available properties. Reply with the number or name of the property you want to view.\"\n}\n\n\n\nSet state = browsing_properties\n\nUSER SELECTS PROPERTY\n\nIf the user selects a property using:\n\n- number\n- property name\n- type\n- location\n\nThen:\n\n1. Identify that property\n2. Store it in memory as selected_property\n3. Set state = property_selected\n\nReturn:\n\n{\n \"properties\":[selected_property],\n \"message\":\"You selected this property. Are you interested in this property?\"\n}\n\n\nUSER SAYS YES / INTERESTED\n\nIf state = property_selected\nand user says:\n\nyes\ninterested\nok\nsure\n\nThen:\n\nSet state = awaiting_phone\n\nReturn:\n\n{\n \"properties\":[selected_property],\n \"message\":\"Great! Please share your phone number so our property consultant can contact you.\"\n}\n\n\nUSER PROVIDES PHONE NUMBER\n\nIf state = awaiting_phone\nand a phone number is detected:\n\nReturn:\n\n{\n \"properties\":[selected_property],\n \"message\":\"Thank you. We are booking a consultation and our agent will contact you soon.\"\n}\n\nSet state = completed\n\nUNKNOWN MESSAGE\n\nIf message cannot be understood:\n\n{\n \"properties\":[],\n \"message\":\"Sorry, I couldn't understand your request. Please ask about properties in Hyderabad.\"\n}\n\n\nUSER REQUEST VARIATIONS\n\nUsers may ask for properties using many natural phrases.\n\nTreat the following messages as requests to retrieve properties:\n\nshow properties\ngive me properties\ngive me the list\nshow the list\nlist properties\nshow options\ngive me options\nshow available properties\nproperties\nyes show properties\ngive me that\nshow me properties\nwhat properties are available\ngive me the list of properties\n\nIf the user sends any of the above messages, treat it the same as \"user asks for properties\".\n\nThen call the Google Sheets tool and return the property list.\n\nCLARIFICATION RULE\n\nIf the user message is unclear but appears related to browsing properties,\npolitely guide the user instead of rejecting the request.\n\nExample response:\n\n{\n \"properties\":[],\n \"message\":\"You can ask things like 'show properties in Madhapur' or 'list apartments in Gachibowli'. How can I help?\"\n}\nPHONE NUMBER VALIDATION RULE\n\nWhen the user sends a phone number, check if it is a valid Indian mobile number.\n\nA valid phone number must:\n- contain exactly 10 digits\n- start with 6, 7, 8, or 9\n\nIf the phone number is valid:\nRespond with:\n\"Thank you! Your consultation has been booked successfully. Our property consultant will contact you soon.\"\n\nIf the phone number is NOT valid:\nDo NOT book the consultation.\nDo NOT send the thank you message.\n\nInstead respond with:\n\"Invalid phone number. Please send a valid 10-digit mobile number starting with 6, 7, 8, or 9. Please Send correct Phone number\"\n\n\nFINAL RULES\n\n\nAlways follow the conversation state.\nNever skip steps.\nNever invent property data.\nNever include tool names in the response.\nAlways return valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -944,
+        32
+      ],
+      "id": "be4e0767-8027-45d6-be33-0e5b15789708",
+      "name": "AI Agent"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b705c5ef-ebb5-4659-923a-76c5c921bb3e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1693c9297606d64932eb1cf92632244c7f746446553c0c291dbd35724c37ab88"
+  },
+  "id": "oFPCUxi7udphhs6G",
+  "tags": []
+}
